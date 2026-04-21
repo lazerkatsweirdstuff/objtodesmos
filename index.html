@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBJ → Desmos Triangle Converter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #1e1e2f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 20px;
+    }
+    .card {
+      background: #2c2c3f;
+      border-radius: 24px;
+      padding: 28px 32px;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid #4a4a6a;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 2.1rem;
+      letter-spacing: -0.5px;
+      color: #f2e9c2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .subtitle {
+      margin-bottom: 24px;
+      color: #b9b9d2;
+      border-left: 4px solid #7aaae0;
+      padding-left: 18px;
+      font-size: 1rem;
+    }
+    .upload-area {
+      background: #1b1b29;
+      border: 2px dashed #5f6a8a;
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+      transition: border 0.2s, background 0.2s;
+      margin-bottom: 28px;
+      cursor: pointer;
+    }
+    .upload-area:hover {
+      border-color: #9bbdf0;
+      background: #232338;
+    }
+    .upload-area.drag-over {
+      border-color: #f5c542;
+      background: #2f2b40;
+    }
+    .upload-btn {
+      background: #3f4b7a;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 40px;
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 12px 0 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .upload-btn:hover {
+      background: #5c6eb0;
+    }
+    #file-info {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #b6b6d0;
+    }
+    textarea {
+      width: 100%;
+      background: #10101a;
+      border: 1px solid #40405c;
+      color: #ececf0;
+      font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 16px 18px;
+      border-radius: 16px;
+      resize: vertical;
+      min-height: 280px;
+      box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin: 20px 0 10px;
+      gap: 12px;
+    }
+    .stats {
+      background: #202031;
+      padding: 8px 18px;
+      border-radius: 32px;
+      font-size: 0.9rem;
+      color: #cdd6f4;
+      border: 1px solid #4d5073;
+    }
+    button {
+      background: #2d3b5e;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      border-radius: 36px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.15s;
+      border: 1px solid #5a6b9c;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    button.copy-btn {
+      background: #0077be;
+      border-color: #6ab0ff;
+    }
+    button.copy-btn:hover {
+      background: #1a8cda;
+    }
+    button:hover {
+      background: #42588a;
+    }
+    .note {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #a7a9c7;
+      text-align: center;
+    }
+    .warning {
+      color: #f5b87b;
+    }
+    .footer-note {
+      background: #26263b;
+      border-radius: 12px;
+      padding: 8px 16px;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #bcbfe0;
+    }
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>
+    <span>📐 OBJ ➔ Desmos</span>
+    <span style="font-size: 1rem; background: #3e3e60; padding: 2px 14px; border-radius: 30px;">triangle format</span>
+  </h1>
+  <div class="subtitle">Drop a Wavefront .obj file – outputs <code>\operatorname{triangle}(...)</code> for Desmos 3D</div>
+
+  <!-- drag & drop zone -->
+  <div class="upload-area" id="drop-area">
+    <div style="font-size: 2.5rem; margin-bottom: 6px;">📂⬇️</div>
+    <div style="font-weight: 500; margin-bottom: 8px;">Click or drag .obj file here</div>
+    <button class="upload-btn" id="fake-upload-btn">Choose OBJ file</button>
+    <input type="file" id="file-input" accept=".obj,text/plain" />
+    <div id="file-info">No file selected</div>
+  </div>
+
+  <!-- output area -->
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <label style="font-weight: 400; letter-spacing: 0.3px;">📋 Desmos‑ready output:</label>
+    <span class="stats" id="triangle-count">0 triangles</span>
+  </div>
+  <textarea id="output" readonly placeholder="Triangle list will appear here …"></textarea>
+
+  <div class="action-bar">
+    <button id="copy-btn" class="copy-btn">📋 Copy all lines</button>
+    <button id="clear-btn">🗑️ Clear / Reset</button>
+    <button id="example-btn">✨ Load example (cube)</button>
+  </div>
+  
+  <div class="footer-note">
+    <strong>ⓘ Paste directly into Desmos 3D</strong> — each line like:<br>
+    <code>\operatorname{triangle}((x1,y1,z1),(x2,y2,z2),(x3,y3,z3))</code><br>
+    • Works with triangulated .obj (f v1 v2 v3). Quad faces are split automatically.<br>
+    • Coordinates are rounded to 6 decimals for cleanliness.
+  </div>
+  <div class="note">
+    ⚡ Supported: <strong>v, f (tri/quad), comments #, o, g, s, usemtl</strong> — ignores normals/textures.
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    const fileInput = document.getElementById('file-input');
+    const dropArea = document.getElementById('drop-area');
+    const outputArea = document.getElementById('output');
+    const fileInfo = document.getElementById('file-info');
+    const triangleCountSpan = document.getElementById('triangle-count');
+    const copyBtn = document.getElementById('copy-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const exampleBtn = document.getElementById('example-btn');
+    const fakeUploadBtn = document.getElementById('fake-upload-btn');
+
+    // store current desmos text for copy
+    let currentOutputText = '';
+
+    // ----- helper: update UI with triangle list -----
+    function setOutputText(text) {
+      currentOutputText = text;
+      outputArea.value = text;
+      // count triangles (non-empty lines)
+      const lines = text.split('\n').filter(l => l.trim() !== '');
+      triangleCountSpan.textContent = `${lines.length} triangle${lines.length !== 1 ? 's' : ''}`;
+    }
+
+    // ----- parse .obj content and generate Desmos \operatorname{triangle} lines -----
+    function convertObjToDesmos(objContent) {
+      const vertices = [];
+      const triangles = [];
+
+      // split into lines
+      const lines = objContent.split(/\r?\n/);
+      
+      for (let rawLine of lines) {
+        let line = rawLine.trim();
+        if (line === '' || line.startsWith('#')) continue;
+        
+        // handle line continuation (backslash) — simple: just merge? Usually .obj doesn't need,
+        // but we strip trailing backslash if any (rare)
+        if (line.endsWith('\\')) {
+          // not fully implemented, but we ignore for simplicity.
+          line = line.slice(0, -1).trim();
+        }
+
+        const parts = line.split(/\s+/);
+        if (parts.length === 0) continue;
+
+        const type = parts[0].toLowerCase();
+
+        // --- vertex ---
+        if (type === 'v') {
+          // v x y z [w]
+          if (parts.length >= 4) {
+            const x = parseFloat(parts[1]);
+            const y = parseFloat(parts[2]);
+            const z = parseFloat(parts[3]);
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+              vertices.push({ x, y, z });
+            }
+          }
+        }
+        // --- face (tri or quad) ---
+        else if (type === 'f') {
+          // face format: f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3 ...
+          // we only need vertex indices (before first '/')
+          const indices = [];
+          for (let i = 1; i < parts.length; i++) {
+            const token = parts[i];
+            // extract vertex index (before '/')
+            const vertexIndexStr = token.split('/')[0];
+            if (vertexIndexStr === '') continue;
+            const idx = parseInt(vertexIndexStr, 10);
+            if (!isNaN(idx)) {
+              // convert 1-based to 0-based, handle negative indices (rare, relative)
+              let zeroBased = (idx > 0) ? idx - 1 : vertices.length + idx;
+              if (zeroBased >= 0 && zeroBased < vertices.length) {
+                indices.push(zeroBased);
+              } else {
+                console.warn(`Vertex index out of range: ${idx}`);
+              }
+            }
+          }
+
+          // triangulate: if 3 verts => one triangle; if 4 => fan triangulation (0,1,2 and 0,2,3)
+          // if >4 (ngon) we use simple fan triangulation
+          if (indices.length >= 3) {
+            // fan triangulation: (v0, v1, v2), (v0, v2, v3), ...
+            for (let i = 1; i < indices.length - 1; i++) {
+              const i0 = indices[0];
+              const i1 = indices[i];
+              const i2 = indices[i + 1];
+              triangles.push([i0, i1, i2]);
+            }
+          }
+        }
+        // ignore other types (vn, vt, g, o, s, usemtl, mtllib ...)
+      }
+
+      if (vertices.length === 0) {
+        throw new Error('No vertices found in OBJ file.');
+      }
+      if (triangles.length === 0) {
+        throw new Error('No faces (triangles/quads) found. Make sure the file contains "f" lines.');
+      }
+
+      // generate Desmos \operatorname{triangle} strings
+      const linesOut = [];
+      for (let tri of triangles) {
+        const v0 = vertices[tri[0]];
+        const v1 = vertices[tri[1]];
+        const v2 = vertices[tri[2]];
+        if (!v0 || !v1 || !v2) {
+          console.warn('Skipping triangle due to missing vertex');
+          continue;
+        }
+
+        // Round to 6 decimals (avoids huge floating point clutter)
+        const format = (val) => {
+          // use toFixed(6) then strip trailing zeros and dot if needed, but keep clean.
+          let s = val.toFixed(6);
+          // remove unnecessary trailing zeros
+          s = s.replace(/\.?0+$/, '');
+          if (s === '-0') s = '0';
+          return s;
+        };
+
+        const x0 = format(v0.x), y0 = format(v0.y), z0 = format(v0.z);
+        const x1 = format(v1.x), y1 = format(v1.y), z1 = format(v1.z);
+        const x2 = format(v2.x), y2 = format(v2.y), z2 = format(v2.z);
+
+        const line = `\\operatorname{triangle}((${x0},${y0},${z0}),(${x1},${y1},${z1}),(${x2},${y2},${z2}))`;
+        linesOut.push(line);
+      }
+
+      return linesOut.join('\n');
+    }
+
+    // ----- handle file reading -----
+    function handleFile(file) {
+      if (!file) return;
+      
+      // update UI
+      fileInfo.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target.result;
+          const desmosOutput = convertObjToDesmos(content);
+          setOutputText(desmosOutput);
+        } catch (err) {
+          alert('❌ Conversion error: ' + err.message);
+          setOutputText('');
+          triangleCountSpan.textContent = '0 triangles';
+          fileInfo.textContent = `⚠️ Error: ${err.message}`;
+        }
+      };
+      reader.onerror = () => {
+        alert('Failed to read file.');
+        fileInfo.textContent = 'Read error.';
+      };
+      reader.readAsText(file);
+    }
+
+    // ----- drag & drop handlers -----
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    dropArea.addEventListener('dragenter', () => dropArea.classList.add('drag-over'));
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+    dropArea.addEventListener('drop', (e) => {
+      dropArea.classList.remove('drag-over');
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    // click on drop area / button
+    fakeUploadBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+    dropArea.addEventListener('click', (e) => {
+      // avoid double trigger when clicking the button itself
+      if (e.target === fakeUploadBtn || fakeUploadBtn.contains(e.target)) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (fileInput.files.length > 0) {
+        handleFile(fileInput.files[0]);
+      }
+    });
+
+    // ----- copy button -----
+    copyBtn.addEventListener('click', async () => {
+      if (!currentOutputText.trim()) {
+        alert('No output to copy.');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(currentOutputText);
+        // temporary feedback
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => { copyBtn.textContent = '📋 Copy all lines'; }, 1500);
+      } catch (err) {
+        alert('Copy failed. Select text manually.');
+      }
+    });
+
+    // ----- clear -----
+    clearBtn.addEventListener('click', () => {
+      setOutputText('');
+      fileInfo.textContent = 'No file selected';
+      fileInput.value = '';
+      triangleCountSpan.textContent = '0 triangles';
+    });
+
+    // ----- example cube (axis-aligned, from -1 to 1) -----
+    exampleBtn.addEventListener('click', () => {
+      // generate a simple triangulated cube (12 triangles)
+      const cubeVerts = [
+        [-1,-1,-1], [ 1,-1,-1], [ 1, 1,-1], [-1, 1,-1], // back
+        [-1,-1, 1], [ 1,-1, 1], [ 1, 1, 1], [-1, 1, 1]  // front
+      ];
+      // faces: each quad as two triangles
+      const quads = [
+        [0,1,2,3], // back
+        [4,5,6,7], // front
+        [0,4,7,3], // left
+        [1,5,6,2], // right
+        [3,2,6,7], // top
+        [0,1,5,4]  // bottom
+      ];
+      
+      const triangles = [];
+      for (let q of quads) {
+        const [a,b,c,d] = q;
+        triangles.push([a,b,c]);
+        triangles.push([a,c,d]);
+      }
+
+      // generate output using the same formatting
+      const linesOut = [];
+      for (let tri of triangles) {
+        const v0 = cubeVerts[tri[0]];
+        const v1 = cubeVerts[tri[1]];
+        const v2 = cubeVerts[tri[2]];
+        const format = (val) => {
+          let s = val.toFixed(6);
+          s = s.replace(/\.?0+$/, '');
+          if (s === '-0') s = '0';
+          return s;
+        };
+        const x0 = format(v0[0]), y0 = format(v0[1]), z0 = format(v0[2]);
+        const x1 = format(v1[0]), y1 = format(v1[1]), z1 = format(v1[2]);
+        const x2 = format(v2[0]), y2 = format(v2[1]), z2 = format(v2[2]);
+        linesOut.push(`\\operatorname{triangle}((${x0},${y0},${z0}),(${x1},${y1},${z1}),(${x2},${y2},${z2}))`);
+      }
+
+      setOutputText(linesOut.join('\n'));
+      fileInfo.textContent = '📦 Example: unit cube (12 triangles)';
+      fileInput.value = ''; // clear file input
+    });
+
+    // initial placeholder
+    setOutputText('');
+  })();
+</script>
+</body>
+</html>
